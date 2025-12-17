@@ -26,6 +26,10 @@ export const loadSafeHouses = async (directoryHandle: FileSystemDirectoryHandle)
     const file = await fileHandle.getFile();
     const arrayBuffer = await loadFileAsArrayBuffer(file);
 
+    if (arrayBuffer.byteLength === 0) {
+        throw new Error('map_meta.bin file is empty');
+    }
+
     const reader = new BinaryReader(arrayBuffer);
 
     reader.mark();
@@ -87,39 +91,45 @@ export const loadSafeHouses = async (directoryHandle: FileSystemDirectoryHandle)
 
     const safeHouseCount = reader.readInt32();
     for (let i = 0; i < safeHouseCount; i++) {
-        const x = reader.readInt32();
-        const y = reader.readInt32();
-        const w = reader.readInt32();
-        const h = reader.readInt32();
-        const owner = reader.readString();
-        const playerCount = reader.readInt32();
-        const players: string[] = [];
-        for (let j = 0; j < playerCount; j++) {
-            const player = reader.readString();
-            players.push(player);
-        }
-        reader.skipBytes(8); // long - last visited
-        let title = `${owner}'s safe house`;
-        if (version >= 101) {
-            title = reader.readString();
-        }
-
-        if (version >= 177) {
-            const playerRespawnCount = reader.readInt32();
-            for (let j = 0; j < playerRespawnCount; j++) {
-                reader.readString();
+        try {
+            const x = reader.readInt32();
+            const y = reader.readInt32();
+            const w = reader.readInt32();
+            const h = reader.readInt32();
+            const owner = reader.readString();
+            const playerCount = reader.readInt32();
+            const players: string[] = [];
+            for (let j = 0; j < playerCount; j++) {
+                const player = reader.readString();
+                players.push(player);
             }
-        }
+            reader.skipBytes(8); // long - last visited
+            let title = `${owner}'s safe house`;
+            if (version >= 101) {
+                title = reader.readString();
+            }
 
-        safeHouses.push({
-            region: [
-                { x: Math.floor(x / 10), y: Math.floor(y / 10) },
-                { x: Math.ceil((x + w) / 10), y: Math.ceil((y + h) / 10) }
-            ],
-            owner,
-            players,
-            title
-        });
+            if (version >= 177) {
+                const playerRespawnCount = reader.readInt32();
+                for (let j = 0; j < playerRespawnCount; j++) {
+                    reader.readString();
+                }
+            }
+
+            safeHouses.push({
+                region: [
+                    { x: Math.floor(x / 10), y: Math.floor(y / 10) },
+                    { x: Math.ceil((x + w) / 10), y: Math.ceil((y + h) / 10) }
+                ],
+                owner,
+                players,
+                title
+            });
+        } catch (error) {
+            throw new Error(
+                `Failed to read safe house ${i + 1} of ${safeHouseCount} at offset ${reader.position}: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
     }
 
     return safeHouses;
