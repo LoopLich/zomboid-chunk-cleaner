@@ -126,9 +126,13 @@ export const loadSafeHouses = async (directoryHandle: FileSystemDirectoryHandle)
                 title
             });
         } catch (error) {
-            throw new Error(
-                `Failed to read safe house ${i + 1} of ${safeHouseCount} at offset ${reader.position}: ${error instanceof Error ? error.message : String(error)}`
+            console.warn(
+                `Failed to read safe house ${i + 1} of ${safeHouseCount} at offset ${reader.position}: ${
+                    error instanceof Error ? error.message : String(error)
+                }. Loaded ${safeHouses.length} safe houses successfully.`
             );
+            // Stop reading if we encounter an error (likely truncated file)
+            break;
         }
     }
 
