@@ -92,6 +92,9 @@ export class BinaryReader {
     }
 
     public skipBytes(count: number): void {
+        if (count < 0) {
+            throw new RangeError(`Cannot skip negative bytes: ${count}`);
+        }
         this._checkBounds(count);
         this._byteOffset += count;
     }
